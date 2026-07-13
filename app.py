@@ -141,7 +141,7 @@ for msg in st.session_state.messages:
 if len(st.session_state.messages) == 0:
     with st.chat_message("assistant", avatar=BOT_AVATAR):
         st.markdown(
-            "Hi there! 👋 I'm the **NovaTech Solutions** document assistant. "
+            "Hi there! 👋 I'm the **NovaTech Solutions** Company assistant. "
             "I can answer questions about our products, pricing, support, and HR policies. "
             "What would you like to know?"
         )
