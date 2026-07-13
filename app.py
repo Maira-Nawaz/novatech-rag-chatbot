@@ -114,7 +114,7 @@ st.markdown("""
 st.markdown(f"""
 <div class="chat-header">
     <h1>🤖 {COMPANY_NAME}</h1>
-    <p>Document Assistant — products, pricing, support & HR policies</p>
+    <p>Your AI-powered guide to NovaTech products, policies, and support.</p>
     <span class="status-badge">● Online</span>
 </div>
 """, unsafe_allow_html=True)
