@@ -17,30 +17,93 @@ st.set_page_config(
     page_title=f"{COMPANY_NAME} — Document Assistant",
     page_icon="🤖",
     layout="centered",
+    initial_sidebar_state="expanded",
 )
 
 # ─────────────────────────────────────────────
-#  CUSTOM CSS
+#  FORCE LIGHT THEME + CUSTOM CSS
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
+    /* Force light background everywhere */
+    html, body, [data-testid="stAppViewContainer"],
+    [data-testid="stMain"], [data-testid="block-container"] {
+        background-color: #F8FAFC !important;
+        color: #1F2937 !important;
+    }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF !important;
+        border-right: 1px solid #E5E7EB;
+    }
+    [data-testid="stSidebar"] * { color: #1F2937 !important; }
+
+    /* Hide default chrome */
     #MainMenu {visibility: hidden;}
     footer     {visibility: hidden;}
     header     {visibility: hidden;}
 
+    /* Header card */
     .chat-header {
+        background: linear-gradient(135deg, #1A3C6E 0%, #2979FF 100%);
+        border-radius: 16px;
+        padding: 28px 24px 20px 24px;
         text-align: center;
-        padding: 24px 0 12px 0;
-        border-bottom: 2px solid #1A3C6E;
-        margin-bottom: 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 16px rgba(26,60,110,0.15);
     }
-    .chat-header h1 { font-size: 1.7rem; font-weight: 700; margin: 0; color: #1A3C6E; }
-    .chat-header p  { color: #6B7280; font-size: 0.9rem; margin: 4px 0 0 0; }
+    .chat-header h1 {
+        font-size: 1.7rem; font-weight: 800;
+        color: #FFFFFF !important; margin: 0; letter-spacing: -0.3px;
+    }
+    .chat-header p {
+        color: rgba(255,255,255,0.82) !important;
+        font-size: 0.9rem; margin: 6px 0 0 0;
+    }
     .status-badge {
         display: inline-block;
-        background: #d4edda; color: #155724;
-        border-radius: 20px; padding: 2px 14px;
-        font-size: 0.75rem; margin-top: 8px;
+        background: rgba(255,255,255,0.2);
+        color: #FFFFFF !important;
+        border: 1px solid rgba(255,255,255,0.4);
+        border-radius: 20px; padding: 3px 14px;
+        font-size: 0.75rem; margin-top: 10px;
+    }
+
+    /* Chat messages — light bubbles */
+    [data-testid="stChatMessage"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E5E7EB;
+        border-radius: 12px !important;
+        margin-bottom: 8px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    [data-testid="stChatMessage"] * { color: #1F2937 !important; }
+
+    /* Chat input */
+    [data-testid="stChatInput"] {
+        background-color: #FFFFFF !important;
+        border: 2px solid #2979FF !important;
+        border-radius: 12px !important;
+        color: #1F2937 !important;
+    }
+    [data-testid="stChatInput"] textarea {
+        color: #1F2937 !important;
+        background-color: #FFFFFF !important;
+    }
+
+    /* Spinner */
+    [data-testid="stSpinner"] * { color: #2979FF !important; }
+
+    /* Buttons */
+    .stButton > button {
+        background-color: #1A3C6E !important;
+        color: white !important;
+        border-radius: 8px !important;
+        border: none !important;
+    }
+    .stButton > button:hover {
+        background-color: #2979FF !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -50,8 +113,8 @@ st.markdown("""
 # ─────────────────────────────────────────────
 st.markdown(f"""
 <div class="chat-header">
-    <h1>🤖 {COMPANY_NAME} — Document Assistant</h1>
-    <p>Ask me anything about NovaTech Solutions — products, pricing, support, HR policies and more.</p>
+    <h1>🤖 {COMPANY_NAME}</h1>
+    <p>Document Assistant — products, pricing, support & HR policies</p>
     <span class="status-badge">● Online</span>
 </div>
 """, unsafe_allow_html=True)
@@ -102,17 +165,20 @@ def call_n8n(user_message: str, session_id: str) -> str:
         response.raise_for_status()
         data = response.json()
 
-        # n8n AI Agent returns { "output": "..." }
         if isinstance(data, dict):
             return data.get("output", data.get("text", data.get("message", str(data))))
+        elif isinstance(data, list) and len(data) > 0:
+            item = data[0]
+            if isinstance(item, dict):
+                return item.get("output", item.get("text", str(item)))
         return str(data)
 
     except requests.exceptions.Timeout:
-        return "⏱ Request timed out. The AI is still processing — please try again."
+        return "⏱ Request timed out. Please try again."
     except requests.exceptions.ConnectionError:
-        return "🔌 Could not connect to the backend. Please check the workflow is published and active."
+        return "🔌 Cannot connect to backend. Check if the workflow is published."
     except requests.exceptions.HTTPError as e:
-        return f"❌ Server error {e.response.status_code}. Check your n8n workflow logs."
+        return f"❌ HTTP {e.response.status_code} error. Check your n8n workflow logs."
     except Exception as e:
         return f"❌ Unexpected error: {str(e)}"
 
@@ -120,12 +186,10 @@ def call_n8n(user_message: str, session_id: str) -> str:
 #  CHAT INPUT
 # ─────────────────────────────────────────────
 if prompt := st.chat_input("Ask a question about NovaTech Solutions..."):
-    # User message
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user", avatar=USER_AVATAR):
         st.markdown(prompt)
 
-    # Bot response
     with st.chat_message("assistant", avatar=BOT_AVATAR):
         with st.spinner("Searching documents..."):
             reply = call_n8n(prompt, st.session_state.session_id)
@@ -137,7 +201,10 @@ if prompt := st.chat_input("Ask a question about NovaTech Solutions..."):
 #  SIDEBAR
 # ─────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### ⚙️ Session Info")
+    st.markdown("## 🤖 NovaTech Assistant")
+    st.markdown("Powered by RAG + AI")
+    st.divider()
+
     st.markdown("**Session ID**")
     st.code(st.session_state.session_id[:8] + "...", language=None)
 
@@ -148,22 +215,24 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
-    st.markdown("""
-**💡 Try asking:**
-- What is NovaCRM?
-- How much does the Business plan cost?
-- Is NovaTech GDPR compliant?
-- How do I raise a support ticket?
-- What is the annual leave policy?
-- Do you offer a free trial?
-    """)
+    st.markdown("**💡 Try asking:**")
+    questions = [
+        "What is NovaCRM?",
+        "Business plan pricing?",
+        "Is NovaTech GDPR compliant?",
+        "How to raise a support ticket?",
+        "Annual leave policy?",
+        "Is there a free trial?",
+    ]
+    for q in questions:
+        st.markdown(f"• {q}")
 
     st.divider()
+    st.markdown("**🔧 How it works**")
     st.markdown("""
-**🔧 How it works**
-1. Your question → **n8n AI Agent**
-2. Cohere embeds the question
-3. Pinecone finds relevant chunks
-4. GPT-4o mini generates the answer
+1. Question → **n8n AI Agent**
+2. Cohere embeds it
+3. Pinecone finds chunks
+4. GPT-4o mini answers
     """)
-    st.caption("Built with n8n · Pinecone · Cohere · OpenAI · Streamlit")
+    st.caption("n8n · Pinecone · Cohere · OpenAI · Streamlit")
