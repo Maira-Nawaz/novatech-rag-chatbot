@@ -5,7 +5,7 @@ import uuid
 # ─────────────────────────────────────────────
 #  CONFIGURATION
 # ─────────────────────────────────────────────
-N8N_WEBHOOK_URL = "https://codequill.app.n8n.cloud/webhook/rag-chatbot-webhook"
+N8N_WEBHOOK_URL = "https://codequill.app.n8n.cloud/webhook/rag-chatbot-webhook/chat"
 COMPANY_NAME    = "NovaTech Solutions"
 BOT_AVATAR      = "🤖"
 USER_AVATAR     = "🧑"
